@@ -2,120 +2,178 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Secret Chat Access</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Application</title>
+  
+  <!-- CSS for Styling -->
   <style>
     body {
-      background-color: #0f0f0f;
-      color: #00ffcc;
-      font-family: 'Courier New', monospace;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
     }
 
-    .container {
-      width: 90%;
+    .chat-container {
+      width: 100%;
       max-width: 600px;
-      background: #1a1a1a;
-      border: 2px solid #00ffcc;
+      background-color: white;
       padding: 20px;
-      border-radius: 8px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
     }
 
-    #chatBox {
+    h1 {
+      text-align: center;
+      color: #4CAF50;
+    }
+
+    #messages {
       height: 300px;
-      overflow-y: auto;
-      border: 1px solid #00ffcc;
+      overflow-y: scroll;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
       padding: 10px;
+      border-radius: 5px;
+      background-color: #fafafa;
+    }
+
+    #messageInput {
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
       margin-bottom: 10px;
-      background-color: #111;
+      width: 100%;
     }
 
-    input[type="text"] {
-      width: 75%;
-      padding: 8px;
-      background: #222;
-      border: 1px solid #00ffcc;
-      color: #00ffcc;
-    }
-
-    button {
-      padding: 8px 12px;
-      background: #00ffcc;
+    #sendBtn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
       border: none;
-      color: black;
+      border-radius: 5px;
+      font-size: 14px;
       cursor: pointer;
-      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    #sendBtn:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      padding: 5px;
+      border-radius: 5px;
+      background-color: #e2e2e2;
+    }
+
+    .message .timestamp {
+      font-size: 10px;
+      color: #999;
     }
   </style>
 </head>
 <body>
-  <div class="container" id="app">
-    <h1>Secret Chat Room</h1>
-    <div id="chatBox"></div>
-    <input type="text" id="messageInput" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send</button>
+
+  <div class="chat-container">
+    <h1>Chat Room</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendBtn">Send</button>
   </div>
 
-  <script>
-    // Simulated allowed IPs
-    const allowedIPs = ["192.168.1.10", "123.45.67.89"];
-    let userIP = prompt("Enter your IP address:");
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
-    if (!allowedIPs.includes(userIP)) {
-      alert("Access Denied: IP not whitelisted");
-      document.body.innerHTML = "<h1 style='color:red;'>403 Forbidden</h1>";
-      throw new Error("IP Blocked");
-    }
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyOlLjYEX7HAmllkYaboSYlJLxXwIDaW8",
+      authDomain: "hello-world-36217.firebaseapp.com",
+      projectId: "hello-world-36217",
+      storageBucket: "hello-world-36217.firebasestorage.app",
+      messagingSenderId: "474206602971",
+      appId: "1:474206602971:web:1c8481157958e5c18c6efe"
+    };
 
-    // Passkey logic
-    let passQuestion = "What's the name of your girlfriend?";
-    let correctAnswer = "Sana"; // 🔑 Change this to your custom passkey
-    let userAnswer = prompt(passQuestion);
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-    if (userAnswer.trim().toLowerCase() !== correctAnswer.toLowerCase()) {
-      alert("Wrong answer. Access denied.");
-      document.body.innerHTML = "<h1 style='color:red;'>Access Denied</h1>";
-      throw new Error("Wrong passkey");
-    }
+    // Reference to the 'messages' node in Firebase Realtime Database
+    const messagesRef = ref(database, 'messages');
 
-    // Auto-delete messages older than 2 hours
-    let startTime = localStorage.getItem("chatStart");
-    let now = Date.now();
-    if (!startTime || now - startTime > 2 * 60 * 60 * 1000) {
-      localStorage.removeItem("chatData");
-      localStorage.setItem("chatStart", now);
-    }
+    // Function to send a new message to Firebase
+    document.getElementById('sendBtn').addEventListener('click', function() {
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value;
+      if (message) {
+        // Push the message to Firebase
+        push(messagesRef, {
+          text: message,
+          timestamp: Date.now()
+        });
+        messageInput.value = ''; // Clear the input field
+      }
+    });
 
-    // Load and display chat messages
-    function loadChat() {
-      let chatBox = document.getElementById("chatBox");
-      chatBox.innerHTML = "";
-      let chat = JSON.parse(localStorage.getItem("chatData")) || [];
-      chat.forEach(msg => {
-        let div = document.createElement("div");
-        div.textContent = msg.text;
-        chatBox.appendChild(div);
-      });
-    }
+    // Listen for new messages in real-time
+    onChildAdded(messagesRef, function(snapshot) {
+      const message = snapshot.val();
+      const messageText = message.text;
+      const messageTimestamp = new Date(message.timestamp).toLocaleString();
 
-    function sendMessage() {
-      let input = document.getElementById("messageInput");
-      let msg = input.value.trim();
-      if (msg === "") return;
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      messageElement.innerHTML = `
+        ${messageText}
+        <div class="timestamp">${messageTimestamp}</div>
+      `;
+      document.getElementById('messages').appendChild(messageElement);
 
-      let chat = JSON.parse(localStorage.getItem("chatData")) || [];
-      chat.push({ text: msg, time: Date.now() });
-      localStorage.setItem("chatData", JSON.stringify(chat));
+      // Scroll to the latest message
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
 
-      input.value = "";
-      loadChat();
-    }
+    const allowedIPs = ["1", "123.45.67.89"];
+let userIP = prompt("Enter your IP address:");
 
-    // Initial load
-    loadChat();
+if (!allowedIPs.includes(userIP)) {
+  alert("Access Denied: IP not whitelisted");
+  document.body.innerHTML = "<h1 style='color:red;'>403 Forbidden</h1>";
+  throw new Error("IP Blocked");
+}
+
+// Passkey logic
+let passQuestion = "What's the name of your girlfriend?";
+let correctAnswer = "TREE"; // 🔑 Change this to your custom passkey
+let userAnswer = prompt(passQuestion);
+
+if (userAnswer.trim().toLowerCase() !== correctAnswer.toLowerCase()) {
+  alert("Wrong answer. Access denied.");
+  document.body.innerHTML = "<h1 style='color:red;'>Access Denied</h1>";
+  throw new Error("Wrong passkey");
+}
+
+// Auto-delete messages older than 2 hours
+let startTime = localStorage.getItem("chatStart");
+let now = Date.now();
+if (!startTime || now - startTime > 2 * 60 * 60 * 1000) {
+  localStorage.removeItem("chatData");
+  localStorage.setItem("chatStart", now);
+}
   </script>
+
 </body>
 </html>
