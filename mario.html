@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secret Chat Access</title>
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: #00ffcc;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      background: #1a1a1a;
+      border: 2px solid #00ffcc;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    #chatBox {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #00ffcc;
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #111;
+    }
+
+    input[type="text"] {
+      width: 75%;
+      padding: 8px;
+      background: #222;
+      border: 1px solid #00ffcc;
+      color: #00ffcc;
+    }
+
+    button {
+      padding: 8px 12px;
+      background: #00ffcc;
+      border: none;
+      color: black;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1>Secret Chat Room</h1>
+    <div id="chatBox"></div>
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    // Simulated allowed IPs
+    const allowedIPs = ["192.168.1.10", "123.45.67.89"];
+    let userIP = prompt("Enter your IP address:");
+
+    if (!allowedIPs.includes(userIP)) {
+      alert("Access Denied: IP not whitelisted");
+      document.body.innerHTML = "<h1 style='color:red;'>403 Forbidden</h1>";
+      throw new Error("IP Blocked");
+    }
+
+    // Passkey logic
+    let passQuestion = "What's the name of your girlfriend?";
+    let correctAnswer = "Sana"; // 🔑 Change this to your custom passkey
+    let userAnswer = prompt(passQuestion);
+
+    if (userAnswer.trim().toLowerCase() !== correctAnswer.toLowerCase()) {
+      alert("Wrong answer. Access denied.");
+      document.body.innerHTML = "<h1 style='color:red;'>Access Denied</h1>";
+      throw new Error("Wrong passkey");
+    }
+
+    // Auto-delete messages older than 2 hours
+    let startTime = localStorage.getItem("chatStart");
+    let now = Date.now();
+    if (!startTime || now - startTime > 2 * 60 * 60 * 1000) {
+      localStorage.removeItem("chatData");
+      localStorage.setItem("chatStart", now);
+    }
+
+    // Load and display chat messages
+    function loadChat() {
+      let chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML = "";
+      let chat = JSON.parse(localStorage.getItem("chatData")) || [];
+      chat.forEach(msg => {
+        let div = document.createElement("div");
+        div.textContent = msg.text;
+        chatBox.appendChild(div);
+      });
+    }
+
+    function sendMessage() {
+      let input = document.getElementById("messageInput");
+      let msg = input.value.trim();
+      if (msg === "") return;
+
+      let chat = JSON.parse(localStorage.getItem("chatData")) || [];
+      chat.push({ text: msg, time: Date.now() });
+      localStorage.setItem("chatData", JSON.stringify(chat));
+
+      input.value = "";
+      loadChat();
+    }
+
+    // Initial load
+    loadChat();
+  </script>
+</body>
+</html>
